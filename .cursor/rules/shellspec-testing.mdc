@@ -1,0 +1,45 @@
+---
+description: use this when writing shell scripts with tdd and shellspec
+alwaysApply: false
+---
+# shellspec Testing Rules
+
+## Setup and Structure
+- Use shellspec for testing shell scripts: `curl -fsSL https://git.io/shellspec | sh -s -- --yes`
+- Create `spec/` directory for test files
+- Name test files with `_spec.sh` suffix (e.g., `spec/script_name_spec.sh`)
+- Each script should have comprehensive test coverage before implementation
+
+## Test-First Development Process
+1. **Write failing tests first** - Always start with tests that fail
+2. **Implement minimal code** to make tests pass
+3. **Refactor while keeping tests green**
+4. **Add more tests incrementally** for each new feature/transformation
+
+## shellspec Test Patterns
+```bash
+#!/bin/sh
+
+Describe 'script name'
+  It 'describes what it should do'
+    When run sh -c 'echo "input" | ./script'
+    The output should equal "expected_output"
+    The status should be success
+  End
+End
+```
+
+## Test Categories to Include
+- **Basic functionality**: Script exists and is executable
+- **Stdin/stdout behavior**: Reads from stdin, writes to stdout
+- **Core transformations**: Each transformation step individually
+- **Edge cases**: Empty input, special characters, multiple lines
+- **File input**: Reading from files via stdin redirection
+- **Composability**: Works in pipelines with other Unix tools
+
+## Testing Commands
+- Run all tests: `shellspec`
+- Run specific test file: `shellspec spec/script_name_spec.sh`
+- Tests should cover both success and failure cases
+- Include tests for file input: `./script < input.txt`
+- Test composability: `input | ./script | other_tool`

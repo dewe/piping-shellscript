@@ -1,0 +1,44 @@
+---
+description: use this when writing shell scripts
+alwaysApply: false
+---
+# POSIX Compliance Rules
+
+## Shebang and Error Handling
+- Use `#!/bin/sh` shebang (never bash-specific)
+- Use `set -eu` for error handling
+
+## Avoid Bash-Specific Features
+- No arrays, use positional parameters
+- No `[[` test operator, use `[` only
+- No `==` in tests, use `=` for string equality
+- No brace expansion, process substitution, or `$'...'` quoting
+
+## Command and Variable Usage
+- Use `printf` instead of `echo` for reliable output
+- Use `command -v` instead of `which`
+- Quote all variables: `"$variable"`
+
+## POSIX-Compliant Patterns
+```bash
+# Good - POSIX compliant
+if [ "$var" = "value" ]; then
+    printf "match\n"
+fi
+
+# Bad - Bash specific
+if [[ $var == "value" ]]; then
+    echo "match"
+fi
+```
+
+## Variable Handling
+```bash
+# Always quote variables
+printf "%s\n" "$variable"
+
+# Parameter expansion (POSIX subset)
+${var:-default}    # Use default if unset
+${var#prefix}      # Remove shortest prefix
+${var%suffix}      # Remove shortest suffix
+```

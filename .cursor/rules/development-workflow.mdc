@@ -1,0 +1,67 @@
+---
+alwaysApply: true
+---
+# Shell Script Development Workflow
+
+## Step-by-Step Process
+1. Create test file in `spec/` directory
+2. Write basic tests (executable, stdin/stdout)
+3. Run tests to see them fail
+4. Create minimal script to pass basic tests
+5. Add transformation tests one by one
+6. Implement each transformation to make tests pass
+7. Add edge case tests (empty lines, special chars, etc.)
+8. Verify composability with other Unix tools
+9. Clean up and refactor while keeping tests green
+
+## Quality Checks
+- All tests must pass before considering feature complete
+- Script must work with file input and in pipelines
+- Use only POSIX-compliant commands and syntax
+- Test with various input types (empty, special chars, multiline)
+- Verify behavior matches Unix Philosophy principles
+
+## Test-Driven Development Cycle
+```
+Write Test → See It Fail → Write Code → See It Pass → Refactor → Repeat
+```
+
+## Essential Test Cases
+1. **Basic functionality**: Script exists and is executable
+2. **Stdin/stdout**: Reads from stdin, writes to stdout
+3. **Core transformations**: Each transformation step individually
+4. **Edge cases**: Empty input, special characters, multiple lines
+5. **File input**: Reading from files via stdin redirection
+6. **Composability**: Works in pipelines with other Unix tools
+# Shell Script Development Workflow
+
+## Step-by-Step Process
+1. Create test file in `spec/` directory
+2. Write basic tests (executable, stdin/stdout)
+3. Run tests to see them fail
+4. Create minimal script to pass basic tests
+5. Add transformation tests one by one
+6. Implement each transformation to make tests pass
+7. Add edge case tests (empty lines, special chars, etc.)
+8. Verify composability with other Unix tools
+9. Clean up and refactor while keeping tests green
+
+## Quality Checks
+- All tests must pass before considering feature complete
+- Script must work with file input and in pipelines
+- Use only POSIX-compliant commands and syntax
+- Test with various input types (empty, special chars, multiline)
+- Verify behavior matches Unix Philosophy principles
+
+## Test-Driven Development Cycle
+```
+Write Test → See It Fail → Write Code → See It Pass → Refactor → Repeat
+```
+
+## Essential Test Cases
+1. **Basic functionality**: Script exists and is executable
+2. **Stdin/stdout**: Reads from stdin, writes to stdout
+3. **Core transformations**: Each transformation step individually
+4. **Edge cases**: Empty input, special characters, multiple lines, usage help
+5. **File input**: Reading from files via stdin redirection
+6. **Composability**: Works in pipelines with other Unix tools

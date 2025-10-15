@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+---
+
+# Unix Philosophy Implementation Rules
+
+## Core Principles
+- **Do one thing well**: Single, focused transformation per script
+- **Filter pattern**: Read from stdin, write to stdout
+- **Line-by-line processing**: each line is processed individually
+- **Composable**: Must work in pipelines with other tools
+- **Silent on success**: Only output data, errors to stderr
+- **Meaningful exit codes**: 0 for success, non-zero for errors
+
+## Composability Requirements
+- Must work with file input: `./script < input.txt`
+- Must work in pipelines: `input | ./script | other_tool`
+- Should handle empty input gracefully
+- Should preserve line structure when processing multiple lines

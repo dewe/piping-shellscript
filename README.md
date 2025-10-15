@@ -122,4 +122,4 @@ For maximum portability, write POSIX syntax shell scripts that are able to run o
 7. Testing for POSIX compliance
 
     * Use shellcheck with POSIX mode, automatically engaged with shebang `#!/bin/sh`, or manually with `shellcheck -s sh script.sh`
-    * TODO: Investigate [`shellspec`](https://github.com/shellspec/shellspec) for test driving scripts.
+    * Use [`shellspec`](https://github.com/shellspec/shellspec) for test driving scripts.
