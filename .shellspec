@@ -1,0 +1,2 @@
+# shellspec project default options
+--format documentation --shell sh
