@@ -2,6 +2,10 @@
 
 Exploring how to create small composable shell scripts that follows the Unix Philosophy.
 
+## Scripts
+
+All scripts are located in the `bin/` directory.
+
 ## The Unix Philosophy
 
 * Write programs that do one thing and do it well. 
