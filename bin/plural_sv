@@ -1,0 +1,78 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    cat >&2 << 'EOF'
+Usage: plural_sv [options]
+
+Convert Swedish nouns from singular to plural form
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  echo 'kvinna' | plural_sv
+  plural_sv < input.txt
+EOF
+}
+
+fetch_plural() {
+    word="$1"
+    
+    # Validate input: only allow alphanumeric, Swedish characters, and hyphens
+    case "$word" in
+        *[!a-zA-ZåäöÅÄÖ0-9-]*)
+            return 1
+            ;;
+    esac
+    
+    set +e
+    html=$(curl -s --max-time 5 "https://sv.wiktionary.org/wiki/$word" 2>/dev/null)
+    curl_status=$?
+    set -e
+    
+    [ $curl_status -ne 0 ] && return 1
+    [ -z "$html" ] && return 1
+    
+    table=$(printf '%s\n' "$html" | 
+        sed -n '/<table.*class="grammar template-sv-subst/,/<\/table>/p')
+    [ -z "$table" ] && return 1
+    
+    # In Nominativ row, get 4th <td> link (Obestämd Plural)
+    # Row structure: Nominativ | sing-indef | sing-def | plural-indef | plural-def
+    plural=$(printf '%s\n' "$table" | 
+        grep -A 5 'Nominativ' | 
+        grep 'href=' | 
+        sed -n '3p' |  # 3rd link = plural indefinite
+        sed 's#.*href="//sv.wiktionary.org/wiki/\([^"]*\)".*#\1#')
+    
+    # Return plural (even if same as word - valid for neuter nouns)
+    [ -n "$plural" ] && echo "$plural"
+}
+
+pluralize() {
+    [ -z "$1" ] && printf '\n' && return
+    
+    wiktionary_result=$(fetch_plural "$1" 2>/dev/null)
+    printf '%s\n' "${wiktionary_result:-$1}"
+}
+
+main() {
+    case "${1:-}" in
+        -h|--help) usage; exit 0 ;;
+    esac
+
+    [ -t 0 ] && usage && exit 1
+
+    if ! IFS= read -r line; then
+        usage && exit 1
+    fi
+
+    pluralize "$line"
+    while IFS= read -r line || [ -n "$line" ]; do
+        pluralize "$line"
+    done
+}
+
+main "$@"
+
