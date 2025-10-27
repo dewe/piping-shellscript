@@ -1,7 +1,7 @@
 .POSIX:
 
 test:
-	shellspec 
+	shellspec $(ARGS) 
 
 .PHONY: test
 

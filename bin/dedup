@@ -1,0 +1,66 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    cat >&2 << 'EOF'
+Usage: dedup [options]
+
+Remove duplicate lines from stdin, preserving first occurrence 
+of each line. This is similar to the `uniq` command, but it 
+preserves all lines, not just consecutive duplicates.
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  echo -e 'a\na\nb\na' | dedup
+  dedup < input.txt
+EOF
+}
+
+process_line() {
+    line="$1"
+    if ! grep -qxF "$line" "$tempfile" 2>/dev/null; then
+        printf '%s\n' "$line" >> "$tempfile"
+        printf '%s\n' "$line"
+    fi
+}
+
+main() {
+    # Check for help flags
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+        esac
+    fi
+
+    # Validate input source
+    if [ -t 0 ]; then
+        usage
+        exit 1
+    fi
+
+    # Check if there's any input
+    if ! IFS= read -r first_line; then
+        usage
+        exit 1
+    fi
+
+    # Create temporary file to track seen lines
+    tempfile=$(mktemp -t dedup.XXXXXX)
+    trap 'rm -f "$tempfile"' EXIT
+
+    # Process first line
+    process_line "$first_line"
+
+    # Process remaining lines
+    while IFS= read -r line || [ -n "$line" ]; do
+        process_line "$line"
+    done
+}
+
+main "$@"
+

@@ -44,7 +44,7 @@ main() {
 
     # Check if there's any input
     if ! IFS= read -r first_line; then
-        usage
+        usage;
         exit 1
     fi
 
