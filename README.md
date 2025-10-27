@@ -6,6 +6,12 @@ Exploring how to create small composable shell scripts that follows the Unix Phi
 
 All scripts are located in the `bin/` directory.
 
+### Available Scripts
+
+- **`slug`**: Convert text into URL-friendly slugs by lowercasing and replacing non-alphanumeric characters with hyphens
+- **`dedup`**: Remove duplicate lines, preserving the first occurrence of each unique line
+- **`trim`**: Remove leading and trailing whitespace from each line
+
 ## The Unix Philosophy
 
 * Write programs that do one thing and do it well. 
