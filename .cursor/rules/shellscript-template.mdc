@@ -1,0 +1,245 @@
+---
+description: shell script template and structure
+alwaysApply: false
+---
+
+# Shell Script Template Structure
+
+All shell scripts in this project follow a consistent template pattern for POSIX compliance and Unix Philosophy adherence.
+
+## Standard Template Structure
+
+```bash
+#!/bin/sh
+set -eu
+
+usage() {
+    cat >&2 << 'EOF'
+Usage: scriptname [options]
+
+Description of what the script does
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  echo 'input' | scriptname
+  scriptname < input.txt
+EOF
+}
+
+# Transformation function specific to script purpose
+transform_line() {
+    # Process the line
+    printf '%s\n' "$1" | [transformation commands]
+}
+
+main() {
+    # Check for help flags
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+        esac
+    fi
+
+    # Validate input source
+    if [ -t 0 ]; then
+        usage
+        exit 1
+    fi
+
+    # Check if there's any input
+    if ! IFS= read -r first_line; then
+        usage
+        exit 1
+    fi
+
+    # Process first line
+    transform_line "$first_line"
+
+    # Process remaining lines
+    while IFS= read -r line || [ -n "$line" ]; do
+        transform_line "$line"
+    done
+}
+
+main "$@"
+```
+
+## Core Components
+
+### 1. Shebang and Error Handling
+
+```bash
+#!/bin/sh
+set -eu
+```
+
+- Use POSIX shell (`/bin/sh`)
+- `set -eu` enables strict error handling (error on undefined vars, exit on error)
+
+### 2. Usage Function
+
+```bash
+usage() {
+    cat >&2 << 'EOF'
+[usage text]
+EOF
+}
+```
+
+- Always write to stderr (`>&2`)
+- Use heredoc with single quotes to prevent expansion
+- Include script name, description, options, and examples
+- Reference existing scripts: [bin/slug](mdc:bin/slug), [bin/dedup](mdc:bin/dedup), [bin/trim](mdc:bin/trim)
+
+### 3. Argument Handling
+
+```bash
+if [ $# -gt 0 ]; then
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+    esac
+fi
+```
+
+- Check for help flags first
+- Show usage and exit with success (0)
+- Easy to extend for additional options
+
+### 4. Input Validation
+
+```bash
+# Validate input source
+if [ -t 0 ]; then
+    usage
+    exit 1
+fi
+
+# Check if there's any input
+if ! IFS= read -r first_line; then
+    usage
+    exit 1
+fi
+```
+
+- `[ -t 0 ]` checks if stdin is connected to terminal (not pipe/file)
+- Read first line to validate input exists
+- Show usage and exit with error (1) on validation failure
+
+### 5. Line-by-Line Processing Pattern
+
+```bash
+# Process first line
+transform_line "$first_line"
+
+# Process remaining lines
+while IFS= read -r line || [ -n "$line" ]; do
+    transform_line "$line"
+done
+```
+
+- **First line**: Read and process immediately
+- **Remaining lines**: Loop with `while IFS= read -r line || [ -n "$line" ]`
+  - `IFS=` prevents word splitting
+  - `-r` prevents backslash interpretation
+  - `|| [ -n "$line" ]` handles lines without newline at EOF
+- Process each line independently
+- Empty lines are preserved (script-dependent behavior)
+
+## Transformation Functions
+
+Each script has a custom transformation function:
+
+### Example: [bin/slug](mdc:bin/slug)
+
+```bash
+slugify() {
+    printf '%s\n' "$1" | 
+    tr '[:upper:]' '[:lower:]' | 
+    tr -c '[:alnum:]\n' '-' | 
+    sed 's/--*/-/g' | 
+    sed 's/^-*//' | 
+    sed 's/-*$//'
+}
+```
+
+- Uses pipeline of POSIX commands
+- Each transformation step is independent
+- Outputs the transformed line
+
+### Example: [bin/dedup](mdc:bin/dedup)
+
+```bash
+tempfile=$(mktemp -t dedup.XXXXXX)
+trap 'rm -f "$tempfile"' EXIT
+
+process_line() {
+    line="$1"
+    if ! grep -qxF "$line" "$tempfile" 2>/dev/null; then
+        printf '%s\n' "$line" >> "$tempfile"
+        printf '%s\n' "$line"
+    fi
+}
+```
+
+- Uses temporary file for tracking
+- `trap` ensures cleanup on exit
+- Conditionally outputs based on seen state
+
+### Example: [bin/trim](mdc:bin/trim)
+
+```bash
+trim_line() {
+    printf '%s\n' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+```
+
+- Simple single-command transformation
+- Uses POSIX character classes
+
+## Special Cases
+
+### Temporary Files (like dedup)
+
+```bash
+tempfile=$(mktemp -t scriptname.XXXXXX)
+trap 'rm -f "$tempfile"' EXIT
+```
+
+- Create with template for uniqueness
+- Always set trap to clean up on exit
+- Use in transformation function as needed
+
+### Main Entry Point
+
+```bash
+main "$@"
+```
+
+- Call main with all arguments
+- Pass through to inner functions via globals or parameters
+
+## Design Principles
+
+1. **Single Responsibility**: Each transformation function does one thing
+2. **No State Between Lines**: Each line is processed independently
+3. **Stdin → Stdout**: Pure filter pattern (except error messages to stderr)
+4. **POSIX Compliant**: Only use POSIX shell and standard utilities
+5. **Composable**: Works in pipelines with other tools
+
+## Testing Requirements
+
+See [.cursor/rules/shellspec-testing.mdc](mdc:.cursor/rules/shellspec-testing.mdc) for testing patterns.
+
+Each script must have corresponding `spec/scriptname_spec.sh` with:
+- Basic usage tests
+- Core transformation tests
+- Edge case tests (empty input, special characters, multiline)
+- Composability tests (pipeline and file redirection)
