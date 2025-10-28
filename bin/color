@@ -1,0 +1,144 @@
+#!/bin/sh
+set -eu
+
+_color_memory_file="${TMPDIR:-/tmp}/color_previous_random_${USER:-$(id -u)}"
+
+usage() {
+    cat >&2 << 'EOF'
+Usage: color COLOR [options]
+
+Add ANSI color codes to input text from stdin to stdout.
+Color names are case-insensitive.
+
+Colors:
+  black, red, green, yellow, blue, magenta, cyan, white, random
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  echo 'hello' | color red
+  color green < input.txt
+  ls | color blue
+EOF
+}
+
+color_code_for() {
+    case "$1" in
+        black)   echo "90" ;;
+        red)     echo "31" ;;
+        green)   echo "32" ;;
+        yellow)  echo "33" ;;
+        blue)    echo "34" ;;
+        magenta) echo "35" ;;
+        cyan)    echo "36" ;;
+        white)   echo "37" ;;
+        *)       return 1 ;;
+    esac
+}
+
+get_all_color_names() {
+    echo "black red green yellow blue magenta cyan white"
+}
+
+get_previous_random_color() {
+    if [ ! -f "$_color_memory_file" ]; then
+        (umask 077 && : > "$_color_memory_file")
+    fi
+    cat "$_color_memory_file" 2>/dev/null || echo ""
+}
+
+get_random_color_name() {
+    previous_color=$(get_previous_random_color)
+    # shellcheck disable=SC2046
+    set -- $(get_all_color_names)
+    num_of_colors=$#
+    
+    while :; do
+        random_num=$(od -An -N1 -tu1 /dev/urandom)
+        random_index=$((random_num % num_of_colors + 1))
+        
+        i=1
+        for color in "$@"; do
+            if [ "$i" -eq "$random_index" ]; then
+                color_name="$color"
+                break
+            fi
+            i=$((i + 1))
+        done
+        
+        if [ -z "$previous_color" ] || [ "$color_name" != "$previous_color" ]; then
+            echo "$color_name" > "$_color_memory_file"
+            echo "$color_name"
+            return
+        fi
+    done
+}
+
+get_color_code() {
+    original_color="$1"
+    color_name=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+    
+    if [ "$color_name" = "random" ]; then
+        color_name=$(get_random_color_name)
+    fi
+    
+    if ! color_code=$(color_code_for "$color_name"); then
+        printf 'Error: Invalid color "%s"\n' "$original_color" >&2
+        usage >&2
+        exit 1
+    fi
+    
+    printf '\033[%dm' "$color_code"
+}
+
+color_line() {
+    color_code="$1"
+    line="$2"
+    if [ -z "$line" ]; then
+        printf '\n'
+    else
+        printf '%s%s\033[0m\n' "$color_code" "$line"
+    fi
+}
+
+main() {
+    # Check for help flags
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+        esac
+    fi
+
+    # Validate color argument
+    if [ $# -eq 0 ]; then
+        usage;
+        exit 1
+    fi
+    color_arg="$1"
+
+    # Validate input source
+    if [ -t 0 ]; then
+        usage;
+        exit 1
+    fi
+
+    # Check if there's any input
+    if ! IFS= read -r first_line; then
+        exit 0
+    fi
+
+    color_code=$(get_color_code "$color_arg")
+    color_line "$color_code" "$first_line"
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        color_code=$(get_color_code "$color_arg")
+        color_line "$color_code" "$line"
+    done
+}
+
+main "$@"
+

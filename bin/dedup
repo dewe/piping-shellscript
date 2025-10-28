@@ -13,7 +13,7 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-  echo -e 'a\na\nb\na' | dedup
+  printf 'a\na\nb\na' | dedup
   dedup < input.txt
 EOF
 }

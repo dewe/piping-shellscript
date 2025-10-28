@@ -20,6 +20,7 @@ alwaysApply: false
 - Quote all variables: `"$variable"`
 
 ## POSIX-Compliant Patterns
+
 ```bash
 # Good - POSIX compliant
 if [ "$var" = "value" ]; then
@@ -33,6 +34,7 @@ fi
 ```
 
 ## Variable Handling
+
 ```bash
 # Always quote variables
 printf "%s\n" "$variable"

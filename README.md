@@ -4,6 +4,7 @@ Small composable shell scripts following the Unix Philosophy.
 
 ## Scripts
 
+- **`color`**: Add ANSI color codes to text (red, green, blue, yellow, etc.)
 - **`dedup`**: Remove duplicate lines, preserving first occurrence
 - **`slug`**: Convert text into URL-friendly slugs
 - **`trim`**: Remove leading and trailing whitespace from lines

@@ -21,13 +21,13 @@ fetch_plural() {
     
     # Validate input: only allow alphanumeric, Swedish characters, and hyphens
     case "$word" in
-        *[!a-zA-ZåäöÅÄÖ0-9-]*)
+        ''|*[!a-zA-ZåäöÅÄÖ0-9-]*)
             return 1
             ;;
     esac
     
     set +e
-    html=$(curl -s --max-time 5 "https://sv.wiktionary.org/wiki/$word" 2>/dev/null)
+    html=$(curl -sS --max-time 5 --fail-with-body --url "https://sv.wiktionary.org/wiki/$word" 2>/dev/null)
     curl_status=$?
     set -e
     
