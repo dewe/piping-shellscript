@@ -177,7 +177,7 @@ Describe 'color'
     # shellcheck disable=SC2016
     When run sh -c '
       printf "line1\nline2\nline3\nline4\nline5" | bin/color random > /tmp/color_output
-      colors=$(sed -n "s/.*\[3\([0-7]\)m.*/\1/p" /tmp/color_output)
+      colors=$(grep -oE "\[[39][0-7]m" /tmp/color_output | sed "s/\[//;s/m//")
       result=0
       last_color=""
       for color in $colors; do
