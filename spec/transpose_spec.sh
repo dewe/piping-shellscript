@@ -62,8 +62,8 @@ oyd"
     End
     When run script bin/transpose
     The output should equal "abc
-bc
-c"
+ bc
+  c"
     The status should be success
   End
 
@@ -105,6 +105,46 @@ BD"
     End
     When run script bin/transpose
     The output should equal "abc"
+    The status should be success
+  End
+
+  It 'handles multiple empty lines between words'
+    Data
+    #|hello
+    #|
+    #|beautiful
+    #|
+    #|world
+    End
+    When run script bin/transpose
+    The output should equal "h b w
+e e o
+l a r
+l u l
+o t d
+  i
+  f
+  u
+  l"
+    The status should be success
+  End
+
+  It 'handles lines of different lengths without empty lines'
+    Data
+    #|hello
+    #|beautiful
+    #|world
+    End
+    When run script bin/transpose
+    The output should equal "hbw
+eeo
+lar
+lul
+otd
+ i
+ f
+ u
+ l"
     The status should be success
   End
 End
