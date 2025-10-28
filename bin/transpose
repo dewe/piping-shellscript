@@ -36,10 +36,66 @@ main() {
     fi
 
     { printf '%s\n' "$first_line"; cat; } | awk '
+    function extract_ansi_codes(line,    prefix, suffix, plain, i, in_escape, c, j, k) {
+        # Extract leading ANSI codes (color start)
+        prefix = ""
+        i = 1
+        in_escape = 0
+        while (i <= length(line)) {
+            c = substr(line, i, 1)
+            if (c == "\033") {
+                in_escape = 1
+                prefix = prefix c
+            } else if (in_escape) {
+                prefix = prefix c
+                if (c == "m") {
+                    in_escape = 0
+                    i++
+                    break
+                }
+            } else {
+                break
+            }
+            i++
+        }
+        
+        # Get the plain text part (between prefix and suffix)
+        plain = substr(line, i)
+        
+        # Extract trailing ANSI codes (reset)
+        suffix = ""
+        j = length(plain)
+        while (j >= 1) {
+            c = substr(plain, j, 1)
+            if (c == "m") {
+                # Look backwards for escape sequence
+                k = j
+                while (k >= 1 && substr(plain, k, 1) != "\033") {
+                    k--
+                }
+                if (k >= 1) {
+                    suffix = substr(plain, k, j - k + 1) suffix
+                    plain = substr(plain, 1, k - 1)
+                    j = k - 1
+                    continue
+                }
+            }
+            j--
+        }
+        
+        ansi_prefix[line_num] = prefix
+        ansi_suffix[line_num] = suffix
+        return plain
+    }
+    
     {
         line_num++
         input_lines[line_num] = $0
-        line_length = length($0)
+        
+        # Extract ANSI codes and get plain text
+        plain_text = extract_ansi_codes($0)
+        plain_lines[line_num] = plain_text
+        line_length = length(plain_text)
         line_lengths[line_num] = line_length
         
         if (line_length > max_len) {
@@ -50,11 +106,17 @@ main() {
         for (i = 1; i <= max_len; i++) {
             line = ""
             for (j = 1; j <= line_num; j++) {
-                input_line = input_lines[j]
+                plain_text = plain_lines[j]
                 input_length = line_lengths[j]
                 
                 if (i <= input_length) {
-                    line = line substr(input_line, i, 1)
+                    char = substr(plain_text, i, 1)
+                    # Wrap character with its original line color codes
+                    if (ansi_prefix[j] != "") {
+                        line = line ansi_prefix[j] char ansi_suffix[j]
+                    } else {
+                        line = line char
+                    }
                 } else {
                     # Add space for positions beyond line length
                     line = line " "

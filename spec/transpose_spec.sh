@@ -147,5 +147,26 @@ otd
  l"
     The status should be success
   End
+
+  It 'handles ANSI color codes correctly'
+    # When transposing colored text, the ANSI escape sequences should not be
+    # counted as characters. The color from each input line should be preserved
+    # vertically in the output (first line's color -> first column's color).
+    When run sh -c 'printf "\033[34mhello\033[0m\n\033[31mworld\033[0m\n" | bin/transpose'
+    The output should equal "$(printf "\033[34mh\033[0m$(printf "\033[31mw\033[0m")
+$(printf "\033[34me\033[0m")$(printf "\033[31mo\033[0m")
+$(printf "\033[34ml\033[0m")$(printf "\033[31mr\033[0m")
+$(printf "\033[34ml\033[0m")$(printf "\033[31ml\033[0m")
+$(printf "\033[34mo\033[0m")$(printf "\033[31md\033[0m")")"
+    The status should be success
+  End
+
+  It 'works with color script in pipeline'
+    # Integration test: color + transpose should preserve colors vertically
+    When run sh -c 'printf "hello\nworld\n" | while IFS= read -r line; do echo "$line" | bin/color blue; done | bin/transpose'
+    The line 1 of output should start with "$(printf "\033[34m")"
+    The line 2 of output should start with "$(printf "\033[34m")"
+    The status should be success
+  End
 End
 
