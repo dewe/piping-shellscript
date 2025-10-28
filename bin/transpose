@@ -37,8 +37,6 @@ main() {
 
     { printf '%s\n' "$first_line"; cat; } | awk '
     function extract_ansi_codes(line,    prefix, suffix, plain, i, in_escape, c, code) {
-        # Extract the first ANSI color code (prefix) and last reset code (suffix)
-        # Strip all ANSI codes from the middle to get plain text
         prefix = ""
         suffix = ""
         plain = ""
@@ -56,22 +54,18 @@ main() {
             } else if (in_escape) {
                 code = code c
                 if (c == "m") {
-                    # End of escape sequence
                     in_escape = 0
                     
-                    # If we haven'\''t found a prefix yet, this is it
                     if (!found_prefix && code != "\033[0m") {
                         prefix = code
                         found_prefix = 1
                     }
-                    # Always update suffix to the last reset code we see
                     if (code == "\033[0m") {
                         suffix = code
                     }
                     code = ""
                 }
             } else {
-                # Regular character (not in escape sequence)
                 plain = plain c
             }
             i++
@@ -82,11 +76,77 @@ main() {
         return plain
     }
     
+    function collect_chars_at_position(position,    j, plain_text, input_length, char) {
+        plain_output = ""
+        colors_for_chars = ""
+        
+        for (j = 1; j <= line_num; j++) {
+            plain_text = plain_lines[j]
+            input_length = line_lengths[j]
+            
+            if (position <= input_length) {
+                char = substr(plain_text, position, 1)
+                plain_output = plain_output char
+                colors_for_chars = colors_for_chars j ","
+            } else {
+                plain_output = plain_output " "
+                colors_for_chars = colors_for_chars "0,"
+            }
+        }
+        
+        sub(/ +$/, "", plain_output)
+        return plain_output
+    }
+    
+    function apply_colors(plain_text, color_mapping,    line, output_len, k, char, source_line, color, suffix, current_color, current_suffix, chars_in_group, color_array) {
+        line = ""
+        output_len = length(plain_text)
+        current_color = ""
+        chars_in_group = ""
+        
+        split(color_mapping, color_array, ",")
+        
+        for (k = 1; k <= output_len; k++) {
+            char = substr(plain_text, k, 1)
+            source_line = color_array[k]
+            
+            if (source_line > 0) {
+                color = ansi_prefix[source_line]
+                suffix = ansi_suffix[source_line]
+            } else {
+                color = ""
+                suffix = ""
+            }
+            
+            if (color != current_color && chars_in_group != "") {
+                if (current_color != "") {
+                    line = line current_color chars_in_group current_suffix
+                } else {
+                    line = line chars_in_group
+                }
+                chars_in_group = ""
+            }
+            
+            chars_in_group = chars_in_group char
+            current_color = color
+            current_suffix = suffix
+        }
+        
+        if (chars_in_group != "") {
+            if (current_color != "") {
+                line = line current_color chars_in_group current_suffix
+            } else {
+                line = line chars_in_group
+            }
+        }
+        
+        return line
+    }
+    
     {
         line_num++
         input_lines[line_num] = $0
         
-        # Extract ANSI codes and get plain text
         plain_text = extract_ansi_codes($0)
         plain_lines[line_num] = plain_text
         line_length = length(plain_text)
@@ -96,77 +156,12 @@ main() {
             max_len = line_length
         }
     }
+    
     END {
         for (i = 1; i <= max_len; i++) {
-            # First pass: collect all characters for this position
-            plain_output = ""
-            colors_for_chars = ""
-            
-            for (j = 1; j <= line_num; j++) {
-                plain_text = plain_lines[j]
-                input_length = line_lengths[j]
-                
-                if (i <= input_length) {
-                    char = substr(plain_text, i, 1)
-                    plain_output = plain_output char
-                    colors_for_chars = colors_for_chars j ","
-                } else {
-                    plain_output = plain_output " "
-                    colors_for_chars = colors_for_chars "0,"
-                }
-            }
-            
-            # Trim trailing spaces from plain output
-            sub(/ +$/, "", plain_output)
-            
-            # Second pass: apply colors to the trimmed output
-            line = ""
-            output_len = length(plain_output)
-            current_color = ""
-            chars_in_group = ""
-            
-            for (k = 1; k <= output_len; k++) {
-                char = substr(plain_output, k, 1)
-                
-                # Find which input line this character came from
-                # Split colors_for_chars and get the k-th element
-                split(colors_for_chars, color_array, ",")
-                source_line = color_array[k]
-                
-                if (source_line > 0) {
-                    color = ansi_prefix[source_line]
-                    suffix = ansi_suffix[source_line]
-                } else {
-                    color = ""
-                    suffix = ""
-                }
-                
-                # If color changed, flush the previous group
-                if (color != current_color && chars_in_group != "") {
-                    if (current_color != "") {
-                        line = line current_color chars_in_group current_suffix
-                    } else {
-                        line = line chars_in_group
-                    }
-                    chars_in_group = ""
-                }
-                
-                # Add character to current group
-                chars_in_group = chars_in_group char
-                current_color = color
-                current_suffix = suffix
-            }
-            
-            # Flush any remaining characters
-            if (chars_in_group != "") {
-                if (current_color != "") {
-                    line = line current_color chars_in_group current_suffix
-                } else {
-                    line = line chars_in_group
-                }
-            }
-            
-            print line
+            plain = collect_chars_at_position(i)
+            colored = apply_colors(plain, colors_for_chars)
+            print colored
         }
     }
     '
