@@ -1,0 +1,211 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    cat >&2 << 'EOF'
+Usage: morse [options]
+
+Convert text to Morse code
+
+Options:
+  -d, --decode  Decode Morse code to text
+  -h, --help    Show this help message
+
+Examples:
+  echo 'SOS' | morse
+  echo '... --- ...' | morse -d
+  morse < input.txt
+EOF
+}
+
+init_morse_map() {
+    cat << 'EOF'
+    map["A"] = ".-"
+    map["B"] = "-..."
+    map["C"] = "-.-."
+    map["D"] = "-.."
+    map["E"] = "."
+    map["F"] = "..-."
+    map["G"] = "--."
+    map["H"] = "...."
+    map["I"] = ".."
+    map["J"] = ".---"
+    map["K"] = "-.-"
+    map["L"] = ".-.."
+    map["M"] = "--"
+    map["N"] = "-."
+    map["O"] = "---"
+    map["P"] = ".--."
+    map["Q"] = "--.-"
+    map["R"] = ".-."
+    map["S"] = "..."
+    map["T"] = "-"
+    map["U"] = "..-"
+    map["V"] = "...-"
+    map["W"] = ".--"
+    map["X"] = "-..-"
+    map["Y"] = "-.--"
+    map["Z"] = "--.."
+
+    map["Å"] = ".--.-"
+    map["Ä"] = ".-.-"
+    map["Ö"] = "---."
+    map["Æ"] = ".-.-"
+    map["Ø"] = "---."
+
+    map["0"] = "-----"
+    map["1"] = ".----"
+    map["2"] = "..---"
+    map["3"] = "...--"
+    map["4"] = "....-"
+    map["5"] = "....."
+    map["6"] = "-...."
+    map["7"] = "--..."
+    map["8"] = "---.."
+    map["9"] = "----."
+
+    map["."] = ".-.-.-"
+    map[","] = "--..--"
+    map["?"] = "..--.."
+    map[sprintf("%c", 39)] = ".----."
+    map["!"] = "-.-.--"
+    map["/"] = "-..-."
+    map["("] = "-.--."
+    map[")"] = "-.--.-"
+    map["&"] = ".-..."
+    map[":"] = "---..."
+    map[";"] = "-.-.-."
+    map["="] = "-...-"
+    map["+"] = ".-.-."
+    map["-"] = "-....-"
+    map["_"] = "..--.-"
+    map["\""] = ".-..-."
+    map["$"] = "...-..-"
+    map["@"] = ".--.-."
+EOF
+}
+
+encode_line() {
+    printf '%s\n' "$1" | LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 awk '
+BEGIN {
+    FS=""
+
+'"$(init_morse_map)"'
+}
+{
+    need_sep = 0
+    word_gap = 0
+
+    for (i = 1; i <= NF; i++) {
+        char = $i
+
+        if (char == " " || char == "\t") {
+            if (need_sep) {
+                word_gap = 1
+            }
+            continue
+        }
+
+        upper_char = toupper(char)
+
+        if (upper_char in map) {
+            code = map[upper_char]
+        } else {
+            code = "?"
+        }
+
+        if (word_gap) {
+            if (need_sep) {
+                printf " /"
+            } else {
+                printf "/"
+            }
+            need_sep = 1
+            word_gap = 0
+        }
+
+        if (need_sep) {
+            printf " "
+        }
+        printf "%s", code
+        need_sep = 1
+    }
+
+    print ""
+}'
+}
+
+decode_line() {
+    printf '%s\n' "$1" | LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 awk '
+BEGIN {
+    FS="[ \t]+"
+
+'"$(init_morse_map)"'
+
+    for (k in map) rev[map[k]] = k
+}
+{
+    n = split($0, t, FS)
+    out = ""
+    for (i = 1; i <= n; i++) {
+        tok = t[i]
+        if (tok == "") continue
+        if (tok == "/") {
+            out = out " "
+            continue
+        }
+        if (tok in rev) {
+            out = out rev[tok]
+        } else {
+            out = out "?"
+        }
+    }
+    print out
+}'
+}
+
+main() {
+    process_line="encode_line"
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            -d|--decode)
+                process_line="decode_line"
+                shift
+                ;;
+            -*)
+                printf 'Error: Unknown option: %s\n' "$1" >&2
+                usage
+                exit 1
+                ;;
+        esac
+    fi
+
+    if [ $# -gt 0 ]; then
+        printf 'Error: Unexpected argument: %s\n' "$1" >&2
+        usage
+        exit 1
+    fi
+
+    if [ -t 0 ]; then
+        usage
+        exit 1
+    fi
+
+    if ! IFS= read -r first_line; then
+        usage
+        exit 1
+    fi
+
+    "$process_line" "$first_line"
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        "$process_line" "$line"
+    done
+}
+
+main "$@"
+

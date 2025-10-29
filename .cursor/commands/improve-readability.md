@@ -1,1 +1,0 @@
-have a look at the code and see if you can find any succinct refactorings that would improve readability?
