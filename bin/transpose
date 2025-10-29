@@ -35,7 +35,7 @@ main() {
         exit 0
     fi
 
-    { printf '%s\n' "$first_line"; cat; } | awk '
+    { printf '%s\n' "$first_line"; cat; } | iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null | awk '
     function extract_ansi_codes(line,    prefix, suffix, plain, i, in_escape, c, code) {
         prefix = ""
         suffix = ""
