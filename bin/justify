@@ -1,0 +1,181 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    cat >&2 << 'EOF'
+Usage: justify WIDTH ALIGNMENT [options]
+
+Justify text to a fixed width with specified alignment
+
+Arguments:
+  WIDTH         Target width (must be positive integer)
+  ALIGNMENT     left, right, or center (case-insensitive)
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  echo 'hello' | justify 20 left
+  echo 'hello' | justify 20 right
+  echo 'hello' | justify 20 center
+  cat file.txt | wrap 40 | justify 40 center
+EOF
+}
+
+validate_width() {
+    width="$1"
+    
+    case "$width" in
+        ''|*[!0-9]*)
+            printf 'Error: Width must be a positive integer\n' >&2
+            usage
+            exit 1
+            ;;
+        0)
+            printf 'Error: Width must be greater than 0\n' >&2
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+validate_alignment() {
+    alignment="$1"
+    normalized=$(printf '%s' "$alignment" | tr '[:upper:]' '[:lower:]')
+    
+    case "$normalized" in
+        left|right|center)
+            echo "$normalized"
+            ;;
+        *)
+            printf 'Error: Alignment must be left, right, or center\n' >&2
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+normalize_line() {
+    line="$1"
+    
+    # Trim leading/trailing whitespace and collapse multiple spaces
+    printf '%s' "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; s/[[:space:]]\{1,\}/ /g'
+}
+
+print_spaces() {
+    count="$1"
+    i=0
+    while [ "$i" -lt "$count" ]; do
+        printf ' '
+        i=$((i + 1))
+    done
+}
+
+align_left() {
+    text="$1"
+    padding="$2"
+    printf '%s' "$text"
+    print_spaces "$padding"
+    printf '\n'
+}
+
+align_right() {
+    text="$1"
+    padding="$2"
+    print_spaces "$padding"
+    printf '%s\n' "$text"
+}
+
+align_center() {
+    text="$1"
+    padding="$2"
+    left_pad=$((padding / 2))
+    right_pad=$((padding - left_pad))
+    print_spaces "$left_pad"
+    printf '%s' "$text"
+    print_spaces "$right_pad"
+    printf '\n'
+}
+
+justify_line() {
+    line="$1"
+    width="$2"
+    alignment="$3"
+    
+    if [ -z "$line" ]; then
+        printf '\n'
+        return
+    fi
+    
+    normalized=$(normalize_line "$line")
+    
+    if [ -z "$normalized" ]; then
+        printf '\n'
+        return
+    fi
+    
+    line_len=${#normalized}
+    
+    if [ "$line_len" -ge "$width" ]; then
+        printf '%s\n' "$normalized"
+        return
+    fi
+    
+    padding=$((width - line_len))
+    
+    case "$alignment" in
+        left)
+            align_left "$normalized" "$padding"
+            ;;
+        right)
+            align_right "$normalized" "$padding"
+            ;;
+        center)
+            align_center "$normalized" "$padding"
+            ;;
+    esac
+}
+
+main() {
+    # Check for help flags
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+        esac
+    fi
+    
+    # Validate arguments
+    if [ $# -lt 2 ]; then
+        usage
+        exit 1
+    fi
+    
+    width="$1"
+    alignment="$2"
+    
+    validate_width "$width"
+    alignment=$(validate_alignment "$alignment")
+    
+    # Validate input source
+    if [ -t 0 ]; then
+        usage
+        exit 1
+    fi
+    
+    # Check if there's any input
+    if ! IFS= read -r first_line; then
+        exit 0
+    fi
+    
+    justify_line "$first_line" "$width" "$alignment"
+    
+    while IFS= read -r line || [ -n "$line" ]; do
+        justify_line "$line" "$width" "$alignment"
+    done
+}
+
+main "$@"
+

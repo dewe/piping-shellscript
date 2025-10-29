@@ -6,6 +6,7 @@ Small composable shell scripts following the Unix Philosophy.
 
 - **`color`**: Add ANSI color codes to text (red, green, blue, yellow, etc.)
 - **`dedup`**: Remove duplicate lines, preserving first occurrence
+- **`justify`**: Align text to a fixed width (left, right, or center)
 - **`slug`**: Convert text into URL-friendly slugs
 - **`transpose`**: Transpose lines of text (convert rows to columns)
 - **`trim`**: Remove leading and trailing whitespace from lines
