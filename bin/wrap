@@ -1,0 +1,152 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    cat >&2 << 'EOF'
+Usage: wrap WIDTH [options]
+
+Wrap lines of text at specified width, breaking at word boundaries
+
+Arguments:
+  WIDTH         Maximum line width (must be positive integer)
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  echo 'hello world' | wrap 10
+  wrap 80 < input.txt
+  cat file.txt | wrap 60 | less
+EOF
+}
+
+validate_width() {
+    width="$1"
+    
+    case "$width" in
+        ''|*[!0-9]*)
+            printf 'Error: Width must be a positive integer\n' >&2
+            usage
+            exit 1
+            ;;
+        0)
+            printf 'Error: Width must be greater than 0\n' >&2
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+get_next_word() {
+    text="$1"
+    
+    case "$text" in
+        *' '*)
+            echo "${text%% *}"
+            ;;
+        *)
+            echo "$text"
+            ;;
+    esac
+}
+
+advance_past_word() {
+    text="$1"
+    word="$2"
+    
+    text="${text#"$word"}"
+    echo "${text# }"
+}
+
+should_wrap() {
+    current_line="$1"
+    word="$2"
+    width="$3"
+    
+    if [ -z "$current_line" ]; then
+        return 1
+    fi
+    
+    current_len=${#current_line}
+    word_len=${#word}
+    
+    [ $((current_len + 1 + word_len)) -gt "$width" ]
+}
+
+wrap_line() {
+    line="$1"
+    width="$2"
+    
+    if [ -z "$line" ]; then
+        printf '\n'
+        return
+    fi
+    
+    line_len=${#line}
+    if [ "$line_len" -le "$width" ]; then
+        printf '%s\n' "$line"
+        return
+    fi
+    
+    current_line=""
+    remaining="$line"
+    
+    while [ -n "$remaining" ]; do
+        word=$(get_next_word "$remaining")
+        remaining=$(advance_past_word "$remaining" "$word")
+        
+        if [ -z "$current_line" ]; then
+            current_line="$word"
+        elif should_wrap "$current_line" "$word" "$width"; then
+            printf '%s\n' "$current_line"
+            current_line="$word"
+        else
+            current_line="$current_line $word"
+        fi
+    done
+    
+    if [ -n "$current_line" ]; then
+        printf '%s\n' "$current_line"
+    fi
+}
+
+main() {
+    # Check for help flags
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+        esac
+    fi
+    
+    # Validate width argument
+    if [ $# -eq 0 ]; then
+        usage
+        exit 1
+    fi
+    
+    width="$1"
+    validate_width "$width"
+    
+    # Validate input source
+    if [ -t 0 ]; then
+        usage
+        exit 1
+    fi
+    
+    # Check if there's any input
+    if ! IFS= read -r first_line; then
+        exit 0
+    fi
+    
+    wrap_line "$first_line" "$width"
+    
+    while IFS= read -r line || [ -n "$line" ]; do
+        wrap_line "$line" "$width"
+    done
+}
+
+main "$@"
+

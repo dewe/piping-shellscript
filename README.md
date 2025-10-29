@@ -9,6 +9,7 @@ Small composable shell scripts following the Unix Philosophy.
 - **`slug`**: Convert text into URL-friendly slugs
 - **`transpose`**: Transpose lines of text (convert rows to columns)
 - **`trim`**: Remove leading and trailing whitespace from lines
+- **`wrap`**: Wrap lines at specified width, breaking at word boundaries
 - **`plural_sv`**: Convert Swedish nouns to plural form
 
 ## The Unix Philosophy
